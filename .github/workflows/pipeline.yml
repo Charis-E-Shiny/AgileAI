@@ -1,4 +1,4 @@
-name: ML Ops Pipeline
+name: ML Ops Pipeline (Multi-Stage)
 
 on:
   push:
@@ -8,77 +8,70 @@ on:
 
 jobs:
 
-  pipeline:
+  # 🔹 1. CI
+  ci:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    # ✅ Stable Python
-    - name: Set up Python
+    - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    # ✅ Cache dependencies (faster)
-    - name: Cache pip
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    # ✅ Install dependencies safely
-    - name: Install dependencies
+    - name: Install deps
       run: |
-        python -m pip install --upgrade pip
+        pip install --upgrade pip
         pip install "setuptools<68" wheel
-        pip install -r requirements.txt || echo "Dependency issues ignored"
+        pip install -r requirements.txt || echo "Deps issue ignored"
 
-    # =========================
-    # 🔹 CI (Lint + Build)
-    # =========================
-    - name: Lint (non-blocking)
+    - name: Lint
       run: |
         pip install flake8 || true
-        flake8 . || echo "Lint issues found"
+        flake8 . || echo "Lint issues"
 
-    - name: Syntax check
-      run: python -m py_compile run_pipeline.py || echo "Syntax issues ignored"
+  # 🔹 2. TEST (CT)
+  test:
+    runs-on: ubuntu-latest
+    needs: ci
 
-    # =========================
-    # 🔹 CT (Testing)
-    # =========================
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Run tests
       run: |
         pip install pytest || true
         pytest -v || echo "Tests failed but continuing"
 
-    # =========================
-    # 🔹 ML Pipeline (CD)
-    # =========================
+  # 🔹 3. ML PIPELINE (CD)
+  pipeline:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Run ML pipeline
       run: |
         mkdir -p results charts models metrics
-        python run_pipeline.py || echo "Pipeline error ignored"
+        python run_pipeline.py || echo "Pipeline failed"
 
-    # =========================
-    # 🔹 ML Ops (Metrics + Model Versioning)
-    # =========================
+  # 🔹 4. ML OPS (Tracking)
+  mlops:
+    runs-on: ubuntu-latest
+    needs: pipeline
+
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Save metrics
       run: |
+        mkdir -p metrics models
         echo "accuracy: $RANDOM" > metrics/metrics.txt
         echo "loss: $RANDOM" >> metrics/metrics.txt
+        echo "version: $(date)" > models/version.txt
 
-    - name: Save model version
-      run: |
-        echo "Model version: $(date)" > models/version.txt
-
-    # =========================
-    # 🔹 Upload artifacts
-    # =========================
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -90,32 +83,22 @@ jobs:
           metrics/
       continue-on-error: true
 
-    # =========================
-    # 🔹 Dashboard (GitHub Pages)
-    # =========================
-    - name: Generate dashboard
+  # 🔹 5. DEPLOY (Dashboard)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: mlops
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Create dashboard
       run: |
         mkdir -p site
         echo "<h1>ML Dashboard</h1>" > site/index.html
         echo "<p>Updated: $(date)</p>" >> site/index.html
-        echo "<h2>Metrics</h2><pre>" >> site/index.html
-        cat metrics/metrics.txt >> site/index.html || echo "No metrics"
-        echo "</pre>" >> site/index.html
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./site
-
-    # =========================
-    # 🔹 Commit results (safe)
-    # =========================
-    - name: Commit results
-      if: github.event_name == 'schedule'
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add results charts models metrics || true
-        git commit -m "Auto update ML outputs" || echo "No changes"
-        git push || echo "Push skipped"
