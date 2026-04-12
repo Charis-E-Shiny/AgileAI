@@ -1,0 +1,5 @@
+{
+  "name": "S&P 500 ML Dashboard",
+  "description": "A comprehensive machine learning dashboard for S&P 500 stock analysis, featuring ML, DL, and QML models with automated pipeline execution.",
+  "requestFramePermissions": []
+}

@@ -1,11 +1,23 @@
-<div align="center">
+# S&P 500 ML Dashboard
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A comprehensive machine learning dashboard for S&P 500 stock analysis.
 
-  <h1>Built with AI Studio</h2>
+## Features
+- **Automated Pipeline**: Data ingestion, feature engineering, and model training.
+- **ML Models**: Random Forest, SVM, Logistic Regression.
+- **Deep Learning**: LSTM and CNN architectures.
+- **Quantum ML**: Experimental VQC and QSVM models.
+- **Interactive Dashboard**: Real-time visualization of model performance.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Structure
+- `pipeline/`: Python source code for the ML pipeline.
+- `results/`: JSON files containing model metrics.
+- `charts/`: Generated visualization images.
+- `src/`: React frontend source code.
+- `server.ts`: Express backend serving APIs and static assets.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
-
-</div>
+## How to Run
+1. Install Python dependencies: `pip install -r requirements.txt`
+2. Install Node dependencies: `npm install`
+3. Run the dev server: `npm run dev`
+4. Trigger the pipeline via the dashboard UI or `python3 run_pipeline.py`

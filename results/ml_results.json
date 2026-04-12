@@ -1,0 +1,20 @@
+{
+    "Random Forest": {
+        "accuracy": 0.6842,
+        "precision": 0.6521,
+        "f1": 0.6612,
+        "auc": 0.7214
+    },
+    "SVM": {
+        "accuracy": 0.6215,
+        "precision": 0.5982,
+        "f1": 0.6014,
+        "auc": 0.6542
+    },
+    "Logistic Regression": {
+        "accuracy": 0.6412,
+        "precision": 0.6214,
+        "f1": 0.6311,
+        "auc": 0.6812
+    }
+}

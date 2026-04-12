@@ -1,0 +1,10 @@
+{
+    "VQC": {
+        "accuracy": 0.5842,
+        "iterations": 50
+    },
+    "QSVM": {
+        "accuracy": 0.6124,
+        "kernel": "quantum_rbf"
+    }
+}
