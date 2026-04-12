@@ -7,3 +7,5 @@ seaborn
 kagglehub
 pennylane
 tensorflow
+autoray==0.6.7
+pennylane==0.32.0
