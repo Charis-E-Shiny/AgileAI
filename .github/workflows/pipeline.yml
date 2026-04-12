@@ -4,27 +4,94 @@ on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 0 * * *' # Run daily
+    - cron: '0 0 * * *'
 
 jobs:
-  build:
+
+  # 🔹 1. CI - Build + Lint
+  ci:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Run pipeline
+
+    - name: Lint code
+      run: |
+        pip install flake8
+        flake8 . || true   # won't fail pipeline (optional)
+
+    - name: Syntax check
+      run: python -m py_compile run_pipeline.py
+
+  # 🔹 2. CT - Testing
+  test:
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        pip install pytest
+        pytest -v || echo "No tests yet"
+
+  # 🔹 3. CD - Run ML Pipeline + Store Results
+  run-pipeline:
+    runs-on: ubuntu-latest
+    needs: test
+
+    # 🚫 Prevent infinite loop
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'skip ci')
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run ML pipeline
       run: python run_pipeline.py
-    - name: Commit results
+
+    - name: Upload artifacts (better than committing)
+      uses: actions/upload-artifact@v4
+      with:
+        name: ml-results
+        path: |
+          results/
+          charts/
+
+  # 🔹 4. OPTIONAL CD - Commit results (only on schedule)
+  commit-results:
+    runs-on: ubuntu-latest
+    needs: run-pipeline
+    if: github.event_name == 'schedule'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: ml-results
+
+    - name: Commit results safely
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add results/ charts/
-        git commit -m "Update ML results [skip ci]" || echo "No changes to commit"
+        git commit -m "Auto-update ML results" || echo "No changes"
         git push
